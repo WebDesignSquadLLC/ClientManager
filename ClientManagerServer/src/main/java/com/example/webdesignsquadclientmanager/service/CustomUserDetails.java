@@ -1,6 +1,7 @@
 package com.example.webdesignsquadclientmanager.service;
 
 import com.example.webdesignsquadclientmanager.entity.User;
+import org.springframework.security.config.core.GrantedAuthorityDefaults;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -9,6 +10,7 @@ import javax.persistence.Column;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class CustomUserDetails implements UserDetails {
@@ -18,17 +20,26 @@ public class CustomUserDetails implements UserDetails {
     private String email;
     private String username;
     private String password;
-    private List<GrantedAuthority> authorities;
+    private Collection<? extends GrantedAuthority> authorities;
 
 
-    public CustomUserDetails(User user) {
-        this.id = user.getId();
-        this.firstName = user.getFirstName();
-        this.lastName = user.getLastName();
-        this.email = user.getEmail();
-        this.username = user.getUsername();
-        this.password = user.getPassword();
-        this.authorities = Arrays.stream(user.getUser_role().split(",")).map(SimpleGrantedAuthority::new).collect(Collectors.toList());
+    public CustomUserDetails(Integer id, String firstName, String lastName, String email, String username, String password, Collection<? extends GrantedAuthority> authorities) {
+        this.id = id;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.email = email;
+        this.username = username;
+        this.password = password;
+        this.authorities = authorities;
+    }
+
+    public static CustomUserDetails build(User user){
+        List<GrantedAuthority> authorities = user.getRoles().stream()
+                .map(role -> new SimpleGrantedAuthority(role.getName().name()))
+                .collect(Collectors.toList());
+
+        return new CustomUserDetails(user.getId(), user.getFirstName(), user.getLastName(),
+                user.getEmail(), user.getUsername(), user.getPassword(), authorities);
     }
 
     @Override
@@ -36,6 +47,21 @@ public class CustomUserDetails implements UserDetails {
         return authorities;
     }
 
+    public Integer getId(){
+        return id;
+    }
+
+    public String getEmail(){
+        return email;
+    }
+
+    public String getFirstName() {
+        return firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
 
     @Override
     public String getPassword() {
@@ -64,6 +90,17 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return isEnabled();
+        return true;
+    }
+
+    @Override
+    public boolean equals(Object o){
+        if(this == o)
+            return true;
+        if (o == null || getClass() != o.getClass())
+            return false;
+
+        CustomUserDetails user = (CustomUserDetails) o;
+        return Objects.equals(id, user.id);
     }
 }
